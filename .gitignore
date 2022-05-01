@@ -1,0 +1,4 @@
+# Ignored Files
+config.py
+*.csv
+__pycache__
