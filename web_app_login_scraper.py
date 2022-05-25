@@ -53,7 +53,7 @@ def get_page_content(s):
 
   orders_home_page= s.get(ORDERS_PAGE_URL)
   # Make a get request to get the url of the app in the default order, page 2
-  orders_page_data = s.get(ORDERS_PAGE_URL+'?page=2&order_by=created_at&sort_by=ASC')
+  orders_page_data = s.get(ORDERS_PAGE_URL+'?page=1&order_by=created_at&sort_by=ASC')
 
   """
   Before Using BeautifulSoup, there was need to inspect the web page to know what classes/html objects
@@ -82,11 +82,22 @@ def extract_data_to_dataframe(s,orders_page_content):
   # redefining get request to dynamically add the data on more pages if they exist
   base_url_for_data = APP_BASE_URL+ f"/reports/total_orders?"
   order = '&order_by=created_at&sort_by=ASC'
-  page = 1
+  # The date details are a payload to the app to specify range of data to pull
+  data_extraction_period = {"start_date": "2022-04-01 01:00:00",
+                            "end_date" : "2022-04-10 01:00:00"}                   
+  # Html extract below showing name of fields
+  # <input type="hidden" name="start_date" class="dashboardStartDate" value="2022-05-02 01:00:00">
+  # <input type="hidden" name="end_date" class="dashboardEndDate" value="2022-05-03 01:00:00"
+  # page = 1
   # Instantiate new dataframe to store data from all available pages
   all_data = pd.DataFrame()
-  while True:
-      orders_dynamic_pages = s.get(base_url_for_data + f"page={page}" + order)
+  for page in range(1,1000):
+      orders_dynamic_pages = s.get(base_url_for_data + f"page={page}" + order,data=data_extraction_period)
+      # wait for page loader on every odd page
+      if (page % 2) != 0:
+            print('waiting for pageloader')
+            print('*- -*'*10)
+            sleep(5)  
       orders_page_paginated_content = BeautifulSoup(orders_dynamic_pages.content,'lxml')
 
       table_data = []
@@ -95,17 +106,27 @@ def extract_data_to_dataframe(s,orders_page_content):
         for cell_data,table_header in zip(table_row.find_all('td'),orders_table_headers):
           row[table_header] = cell_data.text.replace('\n','').strip()
         table_data.append(row)
+        # sleep(5)
       page_data = pd.DataFrame(table_data)
-      all_data = pd.concat([all_data,page_data])
+      
       print('now extracting data from page {}'.format(page))
-      if(page >=20)| (len(page_data)) < 1:
-          break
-      else:
-        page+=1
-        
+      # if(page >=20)| (len(page_data)) < 1:
+      #     break
+      # else:
+      #   page+=1
+      print(page_data)
+      # try:
+      all_data = pd.concat([all_data,page_data])
+      if (len(page_data)) > 5:
         print('sleeping for some seconds before next request')
-        sleep(randint(5,10))
+        sleep(randint(2,5))
+      else:
+        print('seems there is no data on this page, breaking loop')
+        break
+      # except (len(page_data)) <= 5:
+        # break
   print("successfully extracted {} records from web app".format(len(all_data)))
+  # print(page_data)
   return all_data
 
 def write_to_file(all_data):
