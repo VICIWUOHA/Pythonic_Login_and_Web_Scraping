@@ -18,3 +18,14 @@ A Python Script for Logging into  a Web Application and Scraping Data
     - Requests
     - Pandas
     - BeautifulSoup
+
+
+### Expanded To Include:
+
+- A script implementing the Use of **Selenium** as a web driver for scraping data.
+
+**LIBRARY:**
+
+    - Selenium
+    
+
